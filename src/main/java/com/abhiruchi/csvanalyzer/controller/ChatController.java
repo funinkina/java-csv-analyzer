@@ -27,11 +27,12 @@ public class ChatController {
 
     @PostMapping("/query")
     public ResponseEntity<QueryResponse> handleQuery(@RequestBody QueryRequest queryRequest) {
-        String answer = csvProcessingService.answerQuery(queryRequest.getSessionId(), queryRequest.getQuery());
-        return ResponseEntity.ok(new QueryResponse(answer));
+        // This now returns a more complex object
+        QueryResponse response = csvProcessingService.answerQuery(queryRequest.getSessionId(), queryRequest.getQuery());
+        return ResponseEntity.ok(response);
     }
 
-    // --- DTOs (Data Transfer Objects) for request/response bodies ---
+    // --- DTOs (Data Transfer Objects) ---
     @Data
     @AllArgsConstructor
     static class UploadResponse {
@@ -47,7 +48,8 @@ public class ChatController {
 
     @Data
     @AllArgsConstructor
-    static class QueryResponse {
-        private String answer;
+    public static class QueryResponse {
+        private String type; // "text" or "chart"
+        private Object content;
     }
 }

@@ -6,6 +6,7 @@
         <title>CSV Analyzer</title>
         <link rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -122,6 +123,18 @@
         }
         .hidden { display: none; }
         #file-upload-input { display: none; }
+        .bot-message canvas {
+            max-width: 100%;
+            margin-top: 10px;
+        }
+        .bot-message {
+            background-color: #ffffff;
+            border: 1px solid #e5e5e5;
+            align-self: flex-start;
+            /* Give charts a bit more space */
+            max-width: 600px;
+            width: auto;
+        }
     </style>
     </head>
     <body>
@@ -202,7 +215,6 @@
             }
         });
 
-        // Handle sending a query
         const sendQuery = async () => {
             const query = queryInput.value.trim();
             if (!query || !sessionId) return;
@@ -221,7 +233,13 @@
                 if (!response.ok) throw new Error('Query failed.');
 
                 const result = await response.json();
-                updateBotMessage(result.answer);
+                
+                // NEW LOGIC: Check the response type
+                if (result.type === 'chart') {
+                    renderChart(result.content);
+                } else {
+                    updateBotMessage(result.content);
+                }
 
             } catch (error) {
                 updateBotMessage(`Error: ${error.message}`);
@@ -253,6 +271,24 @@
             if (loadingMessage) {
                 loadingMessage.textContent = newText;
                 loadingMessage.classList.remove('loading');
+            }
+        }
+
+        function renderChart(config) {
+            const loadingMessage = chatContainer.querySelector('.bot-message.loading');
+            if (loadingMessage) {
+                loadingMessage.textContent = ''; // Clear the "Analyzing..." text
+                loadingMessage.classList.remove('loading');
+                
+                const canvas = document.createElement('canvas');
+                loadingMessage.appendChild(canvas);
+                
+                try {
+                    new Chart(canvas, config);
+                } catch (e) {
+                    console.error("Chart.js render error:", e);
+                    loadingMessage.textContent = "Sorry, there was an error rendering the chart.";
+                }
             }
         }
     </script>

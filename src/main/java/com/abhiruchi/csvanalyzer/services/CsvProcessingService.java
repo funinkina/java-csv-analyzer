@@ -1,11 +1,14 @@
 package com.abhiruchi.csvanalyzer.services;
 
+import com.abhiruchi.csvanalyzer.controller.ChatController.QueryResponse;
 import com.opencsv.CSVReader;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 // import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,6 +21,9 @@ public class CsvProcessingService {
         this.geminiService = geminiService;
         this.vectorStore = vectorStore;
     }
+
+    private static final List<String> CHART_KEYWORDS = Arrays.asList(
+            "chart", "graph", "plot", "visualize", "bar", "pie", "line", "doughnut");
 
     public void processAndEmbedCsv(String sessionId, MultipartFile file) {
         vectorStore.clear(sessionId); // Clear previous data for the session
@@ -34,18 +40,28 @@ public class CsvProcessingService {
         }
     }
 
-    public String answerQuery(String sessionId, String query) {
+    public QueryResponse answerQuery(String sessionId, String query) {
         List<Double> queryEmbedding = geminiService.getEmbedding(query);
-        List<VectorStore.Entry> similarEntries = vectorStore.findSimilar(sessionId, queryEmbedding, 5); // Get top 5 relevant rows
+        // Get more context for charts, as they often require more data
+        List<VectorStore.Entry> similarEntries = vectorStore.findSimilar(sessionId, queryEmbedding, 15);
 
         List<String> context = similarEntries.stream()
-                                            .map(VectorStore.Entry::getTextChunk)
-                                            .collect(Collectors.toList());
+                .map(VectorStore.Entry::getTextChunk)
+                .collect(Collectors.toList());
 
         if (context.isEmpty()) {
-            return "I don't have enough information from the CSV to answer that. Please upload a relevant file.";
+            return new QueryResponse("text", "I don't have enough information from the CSV to answer that.");
         }
 
-        return geminiService.getChatResponse(query, context);
+        // Decide whether to generate a chart or text
+        boolean isChartRequest = CHART_KEYWORDS.stream().anyMatch(query.toLowerCase()::contains);
+
+        if (isChartRequest) {
+            Map<String, Object> chartConfig = geminiService.getChartJsConfig(query, context);
+            return new QueryResponse("chart", chartConfig);
+        } else {
+            String textAnswer = geminiService.getChatResponse(query, context);
+            return new QueryResponse("text", textAnswer);
+        }
     }
 }
