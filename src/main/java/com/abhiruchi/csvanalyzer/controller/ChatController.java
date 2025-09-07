@@ -8,15 +8,25 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
+import com.abhiruchi.csvanalyzer.model.User;
+import com.abhiruchi.csvanalyzer.repository.UserRepository;
+import com.abhiruchi.csvanalyzer.services.ChatHistoryService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @RestController
 @RequestMapping("/api")
 public class ChatController {
 
     private final CsvProcessingService csvProcessingService;
+    private final ChatHistoryService chatHistoryService;
+    private final UserRepository userRepository;
 
-    public ChatController(CsvProcessingService csvProcessingService) {
+    public ChatController(CsvProcessingService csvProcessingService, ChatHistoryService chatHistoryService,
+            UserRepository userRepository) {
         this.csvProcessingService = csvProcessingService;
+        this.chatHistoryService = chatHistoryService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/upload")
@@ -28,9 +38,13 @@ public class ChatController {
     }
 
     @PostMapping("/query")
-    public ResponseEntity<QueryResponse> handleQuery(@RequestBody QueryRequest queryRequest) {
-        // This now returns a more complex object
+    public ResponseEntity<QueryResponse> handleQuery(@RequestBody QueryRequest queryRequest,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+
+        chatHistoryService.saveMessage(user, "user", "text", queryRequest.getQuery());
         QueryResponse response = csvProcessingService.answerQuery(queryRequest.getSessionId(), queryRequest.getQuery());
+        chatHistoryService.saveMessage(user, "bot", response.getType(), response.getContent());
         return ResponseEntity.ok(response);
     }
 
