@@ -135,12 +135,38 @@
             max-width: 600px;
             width: auto;
         }
+        .suggestions-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 0 20px 20px 20px; /* Add padding below */
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .suggestion-btn {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 16px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .suggestion-btn:hover {
+            background-color: #e0e0e0;
+            border-color: #ccc;
+        }
     </style>
     </head>
     <body>
 
         <div class="chat-container" id="chat-container">
             <!-- Messages will be appended here -->
+        </div>
+
+        <div class="suggestions-container" id="suggestions-container">
+            <!-- Suggestion buttons will be injected here by JS -->
         </div>
 
         <div class="input-area-container">
@@ -177,16 +203,20 @@
         const queryInput = document.getElementById('query-input');
         const startChatBtn = document.getElementById('start-chat-btn');
         const chatContainer = document.getElementById('chat-container');
+        const suggestionsContainer = document.getElementById('suggestions-container');
 
         let sessionId = null;
 
         // Trigger file input when 'Add files' button is clicked
         addFilesBtn.addEventListener('click', () => fileUploadInput.click());
 
-        // Handle file upload
         fileUploadInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (!file) return;
+
+            // Clear old messages and suggestions
+            chatContainer.innerHTML = '';
+            suggestionsContainer.innerHTML = '';
 
             addMessage('bot', `Uploading and processing "${file.name}"...`, true);
             const formData = new FormData();
@@ -203,11 +233,14 @@
                 const result = await response.json();
                 sessionId = result.sessionId;
 
-                updateBotMessage(`File processed. You can now ask questions about "${file.name}".`);
+                updateBotMessage(`File processed. You can now ask questions about "${file.name}" or try a suggestion below.`);
                 queryInput.disabled = false;
                 startChatBtn.disabled = false;
-                queryInput.placeholder = 'Ask a question about your CSV...';
+                queryInput.placeholder = 'Ask a question or click a suggestion...';
                 addFilesBtn.textContent = 'Replace file';
+                
+                // NEW: Display suggestions
+                displaySuggestions(result.suggestions);
                 
             } catch (error) {
                 updateBotMessage(`Error: ${error.message}`);
@@ -218,6 +251,8 @@
         const sendQuery = async () => {
             const query = queryInput.value.trim();
             if (!query || !sessionId) return;
+
+            suggestionsContainer.innerHTML = '';
 
             addMessage('user', query);
             queryInput.value = '';
@@ -254,7 +289,20 @@
             }
         });
 
-        // Helper functions to manage the chat UI
+        function displaySuggestions(suggestions) {
+            suggestionsContainer.innerHTML = ''; 
+            suggestions.forEach(text => {
+                const btn = document.createElement('button');
+                btn.className = 'suggestion-btn';
+                btn.textContent = text;
+                btn.onclick = () => {
+                    queryInput.value = text;
+                    sendQuery();
+                };
+                suggestionsContainer.appendChild(btn);
+            });
+        }
+
         function addMessage(sender, text, isLoading = false) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', `${sender}-message`);
@@ -263,7 +311,7 @@
             }
             messageDiv.textContent = text;
             chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight; // Auto-scroll
+            chatContainer.scrollTop = chatContainer.scrollHeight; 
         }
 
         function updateBotMessage(newText) {
@@ -277,7 +325,7 @@
         function renderChart(config) {
             const loadingMessage = chatContainer.querySelector('.bot-message.loading');
             if (loadingMessage) {
-                loadingMessage.textContent = ''; // Clear the "Analyzing..." text
+                loadingMessage.textContent = ''; 
                 loadingMessage.classList.remove('loading');
                 
                 const canvas = document.createElement('canvas');

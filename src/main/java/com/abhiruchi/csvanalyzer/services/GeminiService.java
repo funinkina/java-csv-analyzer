@@ -93,14 +93,51 @@ public class GeminiService {
                 .getJSONArray("parts").getJSONObject(0)
                 .getString("text");
 
-        // Clean the response in case the model adds markdown
         chartConfigString = chartConfigString.replace("```json", "").replace("```", "").trim();
         try {
-            // Parse the JSON string into a Java Map
             return objectMapper.readValue(chartConfigString, new TypeReference<Map<String, Object>>() {
             });
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to parse Chart.js config from Gemini response", e);
         }
+    }
+
+    public List<String> generateSuggestions(String header, List<String> sampleRows) {
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
+                + apiKey;
+
+        String samplesString = sampleRows.stream().collect(Collectors.joining("\n"));
+        String prompt = "You are a helpful assistant for a CSV analysis tool. " +
+                "Given the following CSV header and a few sample rows, generate 3 concise and relevant questions a user might ask about this data. "
+                +
+                "One of the questions should be about creating a chart or graph. " +
+                "Format the output as a valid JSON array of strings. For example: [\"What is the average salary?\", \"Who are the employees in the IT department?\", \"Create a bar chart of employees per department\"] "
+                +
+                "Only output the JSON array. Do not include markdown backticks (```json), explanations, or any other text. "
+                +
+                "\n--- CSV HEADER ---\n" +
+                header +
+                "\n--- SAMPLE ROWS ---\n" +
+                samplesString +
+                "\n--- END SAMPLES ---";
+
+        String requestBody = "{\"contents\":[{\"parts\":[{\"text\": \""
+                + prompt.replace("\"", "\\\"").replace("\n", "\\n") + "\"}]}]}";
+        String response = restTemplate.postForObject(url, requestBody, String.class);
+
+        JSONObject jsonResponse = new JSONObject(response);
+        String suggestionsString = jsonResponse.getJSONArray("candidates")
+                .getJSONObject(0).getJSONObject("content")
+                .getJSONArray("parts").getJSONObject(0)
+                .getString("text");
+
+        suggestionsString = suggestionsString.replace("```json", "").replace("```", "").trim();
+
+        JSONArray suggestionsArray = new JSONArray(suggestionsString);
+        List<String> suggestions = new ArrayList<>();
+        for (int i = 0; i < suggestionsArray.length(); i++) {
+            suggestions.add(suggestionsArray.getString(i));
+        }
+        return suggestions;
     }
 }

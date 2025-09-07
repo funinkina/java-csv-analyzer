@@ -6,6 +6,7 @@ import lombok.Data;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,8 +22,9 @@ public class ChatController {
     @PostMapping("/upload")
     public ResponseEntity<UploadResponse> uploadFile(@RequestParam("file") MultipartFile file) {
         String sessionId = UUID.randomUUID().toString();
-        csvProcessingService.processAndEmbedCsv(sessionId, file);
-        return ResponseEntity.ok(new UploadResponse(sessionId, "File processed successfully."));
+        // The processing service will now return the suggestions
+        List<String> suggestions = csvProcessingService.processAndSuggest(sessionId, file);
+        return ResponseEntity.ok(new UploadResponse(sessionId, "File processed successfully.", suggestions));
     }
 
     @PostMapping("/query")
@@ -32,12 +34,12 @@ public class ChatController {
         return ResponseEntity.ok(response);
     }
 
-    // --- DTOs (Data Transfer Objects) ---
     @Data
     @AllArgsConstructor
     static class UploadResponse {
         private String sessionId;
         private String message;
+        private List<String> suggestions;
     }
 
     @Data
@@ -49,7 +51,7 @@ public class ChatController {
     @Data
     @AllArgsConstructor
     public static class QueryResponse {
-        private String type; // "text" or "chart"
+        private String type;
         private Object content;
     }
 }
