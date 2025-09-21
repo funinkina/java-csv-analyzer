@@ -27,14 +27,20 @@ public class ChatHistoryService {
         message.setContentType(contentType);
         message.setTimestamp(LocalDateTime.now());
 
-        // If content is not a string (i.e., a chart map), convert to JSON string
-        if (content instanceof String) {
-            message.setContent((String) content);
-        } else {
-            message.setContent(objectMapper.writeValueAsString(content));
+        try {
+            if (content instanceof String) {
+                message.setContent((String) content);
+            } else {
+                message.setContent(objectMapper.writeValueAsString(content));
+            }
+            chatMessageRepository.save(message);
+        } catch (Exception e) {
+            // Log the error and perhaps save a fallback message
+            System.err.println("Error saving message: " + e.getMessage());
+            message.setContent("Error saving chart configuration.");
+            message.setContentType("text");
+            chatMessageRepository.save(message);
         }
-
-        chatMessageRepository.save(message);
     }
 
     public List<ChatMessage> getChatHistory(User user) {

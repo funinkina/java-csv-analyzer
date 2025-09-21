@@ -235,18 +235,7 @@
                 <!-- File preview will be shown here -->
             </div>
             <div class="chat-container" id="chat-container">
-                <!-- RENDER CHAT HISTORY USING THYMELEAF -->
-                <div th:each="msg : ${chatHistory}">
-                    <div
-                        th:class="${'message ' + (msg.role == 'user' ? 'user-message' : 'bot-message')}">
-                        <!-- If it's a chart, create a canvas with a data attribute -->
-                        <canvas th:if="${msg.contentType == 'chart'}"
-                            th:attr="data-config=${msg.content}"></canvas>
-                        <!-- If it's text, display it directly -->
-                        <span th:if="${msg.contentType == 'text'}"
-                            th:text="${msg.content}"></span>
-                    </div>
-                </div>
+                <!-- Chat messages will be loaded here dynamically -->
             </div>
 
             <div class="suggestions-container" id="suggestions-container">
@@ -332,12 +321,18 @@
                         messageDiv.classList.add('message', `${msg.role}-message`);
                         if (msg.contentType === 'chart') {
                             const canvas = document.createElement('canvas');
+                            canvas.style.width = '100%';
+                            canvas.style.height = '400px';
                             messageDiv.appendChild(canvas);
                             try {
                                 const config = JSON.parse(msg.content);
+                                config.options = config.options || {};
+                                config.options.responsive = true;
+                                config.options.maintainAspectRatio = false;
                                 new Chart(canvas, config);
                             } catch (e) {
-                                messageDiv.textContent = "Error rendering chart.";
+                                console.error('Error rendering chart:', e);
+                                messageDiv.textContent = "Error rendering chart: " + e.message;
                             }
                         } else {
                             messageDiv.textContent = msg.content;
