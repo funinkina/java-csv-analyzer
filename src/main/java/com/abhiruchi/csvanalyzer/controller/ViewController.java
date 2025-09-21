@@ -23,7 +23,12 @@ public class ViewController {
 
     @GetMapping("/")
     public String index(Model model, @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+        // Safely retrieve the user; if not found, force logout to avoid redirect loops
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+        if (user == null) {
+            return "redirect:/logout";
+        }
+
         List<ChatMessage> history = chatHistoryService.getChatHistory(user);
         model.addAttribute("chatHistory", history);
         model.addAttribute("username", user.getUsername());

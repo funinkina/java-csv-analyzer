@@ -19,9 +19,10 @@ public class ChatHistoryService {
     }
 
     @SneakyThrows
-    public void saveMessage(User user, String role, String contentType, Object content) {
+    public void saveMessage(User user, String sessionId, String role, String contentType, Object content) {
         ChatMessage message = new ChatMessage();
         message.setUser(user);
+        message.setSessionId(sessionId);
         message.setRole(role);
         message.setContentType(contentType);
         message.setTimestamp(LocalDateTime.now());
@@ -38,5 +39,13 @@ public class ChatHistoryService {
 
     public List<ChatMessage> getChatHistory(User user) {
         return chatMessageRepository.findByUserOrderByTimestampAsc(user);
+    }
+
+    public List<String> getChatSessions(User user) {
+        return chatMessageRepository.findDistinctSessionIdByUser(user);
+    }
+
+    public List<ChatMessage> getChatHistoryBySession(User user, String sessionId) {
+        return chatMessageRepository.findByUserAndSessionIdOrderByTimestampAsc(user, sessionId);
     }
 }

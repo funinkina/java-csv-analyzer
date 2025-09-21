@@ -15,9 +15,49 @@
             background-color: #f7f7f8;
             margin: 0;
             display: flex;
-            flex-direction: column;
             height: 100vh;
             color: #202123;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #fff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .sidebar-header {
+            margin-bottom: 20px;
+        }
+        .conversations {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .conversation-item {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            background-color: #f0f0f0;
+        }
+        .conversation-item:hover {
+            background-color: #e0e0e0;
+        }
+        .sidebar-footer {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .file-preview {
+            padding: 10px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            display: none;
         }
         .chat-container {
             flex-grow: 1;
@@ -122,6 +162,7 @@
         .btn-cleaning:hover { background-color: #ff5252; }
         .btn-cleaning.active {
             background-color: #d32f2f;
+            border: #f8d991;
         }
         .btn:disabled {
             background-color: #ccc;
@@ -170,61 +211,72 @@
     </style>
     </head>
     <body>
-        <div style="position: absolute; top: 10px; right: 20px; z-index: 100;">
-            <span style="margin-right: 15px;">Welcome, <strong
-                    th:text="${username}">User</strong>!</span>
-            <form th:action="@{/logout}" method="post" style="display: inline;">
-                <button type="submit" class="btn btn-dark">Logout</button>
-            </form>
-        </div>
-
-        <div class="chat-container" id="chat-container">
-            <!-- RENDER CHAT HISTORY USING THYMELEAF -->
-            <div th:each="msg : ${chatHistory}">
-                <div
-                    th:class="${'message ' + (msg.role == 'user' ? 'user-message' : 'bot-message')}">
-                    <!-- If it's a chart, create a canvas with a data attribute -->
-                    <canvas th:if="${msg.contentType == 'chart'}"
-                        th:attr="data-config=${msg.content}"></canvas>
-                    <!-- If it's text, display it directly -->
-                    <span th:if="${msg.contentType == 'text'}"
-                        th:text="${msg.content}"></span>
-                </div>
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Conversations</h3>
+            </div>
+            <div class="conversations" id="conversations">
+                <!-- Conversations will be loaded here -->
+            </div>
+            <div class="sidebar-footer">
+                <div>Welcome, <strong id="username"
+                        th:text="${username}">User</strong>!</div>
+                <form th:action="@{/logout}" method="get"
+                    style="margin-top: 10px;">
+                    <button type="submit" class="btn btn-dark">Logout</button>
+                </form>
             </div>
         </div>
-
-        <div class="suggestions-container" id="suggestions-container">
-            <!-- Suggestion buttons will be injected here by JS -->
-        </div>
-
-        <div class="input-area-container">
-            <div class="input-area">
-                <input type="text" id="query-input" class="input-field"
-                    placeholder="Analyze with files, quickly gain insights."
-                    disabled>
-                <div class="button-bar">
-                    <div class="left-buttons">
-                        <input type="file" id="file-upload-input" accept=".csv">
-                        <button class="btn btn-dark" id="add-files-btn">
-                            <i class="fa-solid fa-paperclip"></i> Add files
-                        </button>
-                        <i class="fa-solid fa-layer-group icon"></i>
-                        <button class="btn btn-light active"
-                            id="general-mode-btn">General
-                            mode</button>
-                        <button class="btn btn-light"
-                            id="advanced-mode-btn">Advanced mode</button>
-                        <button class="btn btn-cleaning" id="cleaning-mode-btn">
-                            <i class="fa-solid fa-broom"></i> Data Cleaning Mode
-                        </button>
+        <div class="main-content">
+            <div class="file-preview" id="file-preview">
+                <!-- File preview will be shown here -->
+            </div>
+            <div class="chat-container" id="chat-container">
+                <!-- RENDER CHAT HISTORY USING THYMELEAF -->
+                <div th:each="msg : ${chatHistory}">
+                    <div
+                        th:class="${'message ' + (msg.role == 'user' ? 'user-message' : 'bot-message')}">
+                        <!-- If it's a chart, create a canvas with a data attribute -->
+                        <canvas th:if="${msg.contentType == 'chart'}"
+                            th:attr="data-config=${msg.content}"></canvas>
+                        <!-- If it's text, display it directly -->
+                        <span th:if="${msg.contentType == 'text'}"
+                            th:text="${msg.content}"></span>
                     </div>
-                    <div class="right-buttons">
-                        <i class="fa-solid fa-chart-simple icon"></i>
-                        <button class="btn btn-primary" id="start-chat-btn"
-                            disabled>
-                            Start a new chat <i
-                                class="fa-solid fa-paper-plane"></i>
-                        </button>
+                </div>
+            </div>
+
+            <div class="suggestions-container" id="suggestions-container">
+                <!-- Suggestion buttons will be injected here by JS -->
+            </div>
+
+            <div class="input-area-container">
+                <div class="input-area">
+                    <input type="text" id="query-input" class="input-field"
+                        placeholder="Analyze with files, quickly gain insights."
+                        disabled>
+                    <div class="button-bar">
+                        <div class="left-buttons">
+                            <input type="file" id="file-upload-input"
+                                accept=".csv">
+                            <button class="btn btn-dark" id="add-files-btn">
+                                <i class="fa-solid fa-paperclip"></i> Add files
+                            </button>
+                            <i class="fa-solid fa-layer-group icon"></i>
+                            <button class="btn btn-cleaning"
+                                id="cleaning-mode-btn">
+                                <i class="fa-solid fa-broom"></i> Data Cleaning
+                                Mode
+                            </button>
+                        </div>
+                        <div class="right-buttons">
+                            <i class="fa-solid fa-chart-simple icon"></i>
+                            <button class="btn btn-primary" id="start-chat-btn"
+                                disabled>
+                                Start a new chat <i
+                                    class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -238,9 +290,62 @@
         const chatContainer = document.getElementById('chat-container');
         const suggestionsContainer = document.getElementById('suggestions-container');
         const cleaningModeBtn = document.getElementById('cleaning-mode-btn');
+        const conversationsDiv = document.getElementById('conversations');
+        const filePreviewDiv = document.getElementById('file-preview');
 
         let sessionId = null;
         let isCleaningMode = false;
+
+        // Load past conversations
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations', { credentials: 'include' });
+                if (response.ok) {
+                    const sessions = await response.json();
+                    conversationsDiv.innerHTML = '';
+                    sessions.forEach(session => {
+                        const item = document.createElement('div');
+                        item.className = 'conversation-item';
+                        item.textContent = `Session ${session}`;
+                        item.onclick = () => loadConversation(session);
+                        conversationsDiv.appendChild(item);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        // Load a specific conversation
+        async function loadConversation(session) {
+            try {
+                const response = await fetch(`/api/conversation/${session}`, { credentials: 'include' });
+                if (response.ok) {
+                    const messages = await response.json();
+                    chatContainer.innerHTML = '';
+                    messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.classList.add('message', `${msg.role}-message`);
+                        if (msg.contentType === 'chart') {
+                            const canvas = document.createElement('canvas');
+                            messageDiv.appendChild(canvas);
+                            try {
+                                const config = JSON.parse(msg.content);
+                                new Chart(canvas, config);
+                            } catch (e) {
+                                messageDiv.textContent = "Error rendering chart.";
+                            }
+                        } else {
+                            messageDiv.textContent = msg.content;
+                        }
+                        chatContainer.appendChild(messageDiv);
+                    });
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+            }
+        }
 
         // Trigger file input when 'Add files' button is clicked
         addFilesBtn.addEventListener('click', () => fileUploadInput.click());
@@ -261,6 +366,7 @@
                 const response = await fetch('/api/upload', {
                     method: 'POST',
                     body: formData,
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error('File upload failed.');
@@ -273,6 +379,9 @@
                 startChatBtn.disabled = false;
                 queryInput.placeholder = 'Ask a question or click a suggestion...';
                 addFilesBtn.textContent = 'Replace file';
+                
+                // Show file preview
+                showFilePreview(file);
                 
                 // NEW: Display suggestions
                 displaySuggestions(result.suggestions);
@@ -296,6 +405,7 @@
             });
             // Scroll to bottom after loading history
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            loadConversations();
         });
 
         const sendQuery = async () => {
@@ -313,6 +423,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ sessionId: sessionId, query: query, isCleaning: isCleaningMode }),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error('Request failed.');
@@ -416,6 +527,11 @@
                 }
             }
         }
-    </script>
+
+        function showFilePreview(file) {
+            filePreviewDiv.innerHTML = `<strong>File: ${file.name}</strong> (${(file.size / 1024).toFixed(2)} KB)`;
+            filePreviewDiv.style.display = 'block';
+        }
+        </script>
     </body>
 </html>

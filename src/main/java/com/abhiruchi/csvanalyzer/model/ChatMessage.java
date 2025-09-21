@@ -26,4 +26,6 @@ public class ChatMessage {
     private String contentType; // "text" or "chart"
 
     private LocalDateTime timestamp;
+
+    private String sessionId;
 }

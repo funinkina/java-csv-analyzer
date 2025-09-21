@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
+import com.abhiruchi.csvanalyzer.model.ChatMessage;
 import com.abhiruchi.csvanalyzer.model.User;
 import com.abhiruchi.csvanalyzer.repository.UserRepository;
 import com.abhiruchi.csvanalyzer.services.ChatHistoryService;
@@ -42,11 +43,12 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
 
-        chatHistoryService.saveMessage(user, "user", "text", queryRequest.getQuery());
+        chatHistoryService.saveMessage(user, queryRequest.getSessionId(), "user", "text", queryRequest.getQuery());
 
         if (queryRequest.isCleaning()) {
             String cleanedCsv = csvProcessingService.cleanData(queryRequest.getSessionId(), queryRequest.getQuery());
-            chatHistoryService.saveMessage(user, "bot", "text", "Data cleaned and downloaded.");
+            chatHistoryService.saveMessage(user, queryRequest.getSessionId(), "bot", "text",
+                    "Data cleaned and downloaded.");
             return ResponseEntity.ok()
                     .header("Content-Disposition", "attachment; filename=\"cleaned_data.csv\"")
                     .header("Content-Type", "text/csv")
@@ -54,9 +56,25 @@ public class ChatController {
         } else {
             QueryResponse response = csvProcessingService.answerQuery(queryRequest.getSessionId(),
                     queryRequest.getQuery());
-            chatHistoryService.saveMessage(user, "bot", response.getType(), response.getContent());
+            chatHistoryService.saveMessage(user, queryRequest.getSessionId(), "bot", response.getType(),
+                    response.getContent());
             return ResponseEntity.ok(response);
         }
+    }
+
+    @GetMapping("/conversations")
+    public ResponseEntity<List<String>> getConversations(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+        List<String> sessions = chatHistoryService.getChatSessions(user);
+        return ResponseEntity.ok(sessions);
+    }
+
+    @GetMapping("/conversation/{sessionId}")
+    public ResponseEntity<List<ChatMessage>> getConversation(@PathVariable String sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+        List<ChatMessage> messages = chatHistoryService.getChatHistoryBySession(user, sessionId);
+        return ResponseEntity.ok(messages);
     }
 
     @Data
