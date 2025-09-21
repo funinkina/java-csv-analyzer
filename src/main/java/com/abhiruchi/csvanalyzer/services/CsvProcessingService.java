@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,6 +21,7 @@ public class CsvProcessingService {
 
     private final GeminiService geminiService;
     private final VectorStore vectorStore;
+    private final Map<String, List<String[]>> sessionCsvData = new ConcurrentHashMap<>();
 
     public CsvProcessingService(GeminiService geminiService, VectorStore vectorStore) {
         this.geminiService = geminiService;
@@ -38,6 +40,8 @@ public class CsvProcessingService {
             if (allRows.isEmpty()) {
                 throw new RuntimeException("CSV file is empty.");
             }
+
+            sessionCsvData.put(sessionId, allRows);
 
             String header = String.join(", ", allRows.get(0));
             List<String> sampleRows = allRows.stream()
@@ -82,5 +86,13 @@ public class CsvProcessingService {
             String textAnswer = geminiService.getChatResponse(query, context);
             return new QueryResponse("text", textAnswer);
         }
+    }
+
+    public String cleanData(String sessionId, String prompt) {
+        List<String[]> csvData = sessionCsvData.get(sessionId);
+        if (csvData == null || csvData.isEmpty()) {
+            throw new RuntimeException("No CSV data found for session.");
+        }
+        return geminiService.getCleanedCsv(prompt, csvData);
     }
 }

@@ -115,6 +115,14 @@
             color: white;
         }
         .btn-primary:hover { background-color: #7b25c9; }
+        .btn-cleaning {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        .btn-cleaning:hover { background-color: #ff5252; }
+        .btn-cleaning.active {
+            background-color: #d32f2f;
+        }
         .btn:disabled {
             background-color: #ccc;
             cursor: not-allowed;
@@ -201,9 +209,14 @@
                             <i class="fa-solid fa-paperclip"></i> Add files
                         </button>
                         <i class="fa-solid fa-layer-group icon"></i>
-                        <button class="btn btn-light active">General
+                        <button class="btn btn-light active"
+                            id="general-mode-btn">General
                             mode</button>
-                        <button class="btn btn-light">Advanced mode</button>
+                        <button class="btn btn-light"
+                            id="advanced-mode-btn">Advanced mode</button>
+                        <button class="btn btn-cleaning" id="cleaning-mode-btn">
+                            <i class="fa-solid fa-broom"></i> Data Cleaning Mode
+                        </button>
                     </div>
                     <div class="right-buttons">
                         <i class="fa-solid fa-chart-simple icon"></i>
@@ -224,8 +237,10 @@
         const startChatBtn = document.getElementById('start-chat-btn');
         const chatContainer = document.getElementById('chat-container');
         const suggestionsContainer = document.getElementById('suggestions-container');
+        const cleaningModeBtn = document.getElementById('cleaning-mode-btn');
 
         let sessionId = null;
+        let isCleaningMode = false;
 
         // Trigger file input when 'Add files' button is clicked
         addFilesBtn.addEventListener('click', () => fileUploadInput.click());
@@ -291,24 +306,38 @@
 
             addMessage('user', query);
             queryInput.value = '';
-            addMessage('bot', 'Analyzing...', true);
+            addMessage('bot', isCleaningMode ? 'Cleaning data...' : 'Analyzing...', true);
 
             try {
                 const response = await fetch('/api/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId: sessionId, query: query }),
+                    body: JSON.stringify({ sessionId: sessionId, query: query, isCleaning: isCleaningMode }),
                 });
 
-                if (!response.ok) throw new Error('Query failed.');
+                if (!response.ok) throw new Error('Request failed.');
 
-                const result = await response.json();
-                
-                // NEW LOGIC: Check the response type
-                if (result.type === 'chart') {
-                    renderChart(result.content);
+                if (isCleaningMode) {
+                    // Handle file download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'cleaned_data.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    updateBotMessage('Data cleaned successfully. File downloaded.');
                 } else {
-                    updateBotMessage(result.content);
+                    const result = await response.json();
+                    
+                    // NEW LOGIC: Check the response type
+                    if (result.type === 'chart') {
+                        renderChart(result.content);
+                    } else {
+                        updateBotMessage(result.content);
+                    }
                 }
 
             } catch (error) {
@@ -321,6 +350,19 @@
         queryInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 sendQuery();
+            }
+        });
+
+        cleaningModeBtn.addEventListener('click', () => {
+            isCleaningMode = !isCleaningMode;
+            if (isCleaningMode) {
+                cleaningModeBtn.classList.add('active');
+                queryInput.placeholder = 'Enter cleaning instructions (e.g., remove duplicates, fill missing values)...';
+                startChatBtn.innerHTML = 'Clean Data <i class="fa-solid fa-download"></i>';
+            } else {
+                cleaningModeBtn.classList.remove('active');
+                queryInput.placeholder = 'Analyze with files, quickly gain insights.';
+                startChatBtn.innerHTML = 'Start a new chat <i class="fa-solid fa-paper-plane"></i>';
             }
         });
 

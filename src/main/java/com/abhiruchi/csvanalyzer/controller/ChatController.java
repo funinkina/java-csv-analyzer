@@ -38,14 +38,25 @@ public class ChatController {
     }
 
     @PostMapping("/query")
-    public ResponseEntity<QueryResponse> handleQuery(@RequestBody QueryRequest queryRequest,
+    public ResponseEntity<?> handleQuery(@RequestBody QueryRequest queryRequest,
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
 
         chatHistoryService.saveMessage(user, "user", "text", queryRequest.getQuery());
-        QueryResponse response = csvProcessingService.answerQuery(queryRequest.getSessionId(), queryRequest.getQuery());
-        chatHistoryService.saveMessage(user, "bot", response.getType(), response.getContent());
-        return ResponseEntity.ok(response);
+
+        if (queryRequest.isCleaning()) {
+            String cleanedCsv = csvProcessingService.cleanData(queryRequest.getSessionId(), queryRequest.getQuery());
+            chatHistoryService.saveMessage(user, "bot", "text", "Data cleaned and downloaded.");
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"cleaned_data.csv\"")
+                    .header("Content-Type", "text/csv")
+                    .body(cleanedCsv);
+        } else {
+            QueryResponse response = csvProcessingService.answerQuery(queryRequest.getSessionId(),
+                    queryRequest.getQuery());
+            chatHistoryService.saveMessage(user, "bot", response.getType(), response.getContent());
+            return ResponseEntity.ok(response);
+        }
     }
 
     @Data
@@ -60,6 +71,7 @@ public class ChatController {
     static class QueryRequest {
         private String sessionId;
         private String query;
+        private boolean isCleaning;
     }
 
     @Data
