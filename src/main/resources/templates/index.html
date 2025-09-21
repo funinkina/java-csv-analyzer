@@ -214,6 +214,9 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h3>Conversations</h3>
+                <button id="new-conversation-btn" class="btn btn-primary"
+                    style="width: 100%; margin-bottom: 10px;">New
+                    Conversation</button>
             </div>
             <div class="conversations" id="conversations">
                 <!-- Conversations will be loaded here -->
@@ -292,6 +295,7 @@
         const cleaningModeBtn = document.getElementById('cleaning-mode-btn');
         const conversationsDiv = document.getElementById('conversations');
         const filePreviewDiv = document.getElementById('file-preview');
+        const newConversationBtn = document.getElementById('new-conversation-btn');
 
         let sessionId = null;
         let isCleaningMode = false;
@@ -340,6 +344,13 @@
                         }
                         chatContainer.appendChild(messageDiv);
                     });
+                    const systemMessage = messages.find(msg => msg.role === 'system');
+                    if (systemMessage) {
+                        const fileName = systemMessage.content.replace('Uploaded file: ', '');
+                        filePreviewDiv.innerHTML = `<strong>File:</strong> ${fileName}`;
+                    } else {
+                        filePreviewDiv.innerHTML = '';
+                    }
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             } catch (error) {
@@ -373,6 +384,7 @@
                 
                 const result = await response.json();
                 sessionId = result.sessionId;
+                filePreviewDiv.innerHTML = `<strong>File:</strong> ${file.name}`;
 
                 updateBotMessage(`File processed. You can now ask questions about "${file.name}" or try a suggestion below.`);
                 queryInput.disabled = false;
@@ -532,6 +544,48 @@
             filePreviewDiv.innerHTML = `<strong>File: ${file.name}</strong> (${(file.size / 1024).toFixed(2)} KB)`;
             filePreviewDiv.style.display = 'block';
         }
+
+        // NEW: Handle new conversation button
+        document.getElementById('new-conversation-btn').addEventListener('click', async () => {
+            const confirmNew = confirm("This will clear the current session. Do you want to continue?");
+            if (!confirmNew) return;
+
+            // Clear chat and suggestions
+            chatContainer.innerHTML = '';
+            suggestionsContainer.innerHTML = '';
+            queryInput.value = '';
+            queryInput.disabled = true;
+            startChatBtn.disabled = true;
+            addFilesBtn.textContent = 'Add files';
+
+            // Notify backend
+            try {
+                const response = await fetch('/api/new-conversation', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    sessionId = null;
+                    updateBotMessage('New conversation started. You can upload a new file or ask a question.');
+                } else {
+                    updateBotMessage('Error starting new conversation.');
+                }
+            } catch (error) {
+                updateBotMessage(`Error: ${error.message}`);
+                console.error('New Conversation Error:', error);
+            }
+        });
+
+        newConversationBtn.addEventListener('click', () => {
+            sessionId = null;
+            chatContainer.innerHTML = '';
+            filePreviewDiv.innerHTML = '';
+            suggestionsContainer.innerHTML = '';
+            isCleaningMode = false;
+            cleaningModeBtn.classList.remove('active');
+            queryInput.placeholder = 'Analyze with files, quickly gain insights.';
+            startChatBtn.innerHTML = 'Start a new chat <i class="fa-solid fa-paper-plane"></i>';
+        });
         </script>
     </body>
 </html>

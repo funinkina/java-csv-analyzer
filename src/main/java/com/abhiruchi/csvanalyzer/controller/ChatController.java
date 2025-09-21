@@ -31,10 +31,14 @@ public class ChatController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<UploadResponse> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<UploadResponse> uploadFile(@RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
         String sessionId = UUID.randomUUID().toString();
         // The processing service will now return the suggestions
         List<String> suggestions = csvProcessingService.processAndSuggest(sessionId, file);
+        chatHistoryService.saveMessage(user, sessionId, "system", "text",
+                "Uploaded file: " + file.getOriginalFilename());
         return ResponseEntity.ok(new UploadResponse(sessionId, "File processed successfully.", suggestions));
     }
 
